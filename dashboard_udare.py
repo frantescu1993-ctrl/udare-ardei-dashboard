@@ -1,4 +1,4 @@
-# dashboard_udare.py - Dashboard extins cu grafice multiple
+# dashboard_udare.py - Dashboard cu prognoză meteo online
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -17,66 +17,19 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ========== CSS PERSONALIZAT ==========
-st.markdown("""
-<style>
-    .metric-card {
-        background-color: #f0f2f6;
-        border-radius: 10px;
-        padding: 15px;
-        text-align: center;
-    }
-    .warning {
-        background-color: #fff3cd;
-        border-left: 4px solid #ffc107;
-        padding: 10px;
-        margin: 10px 0;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# ========== TITLU ==========
-st.title("🌶️ Sistem AI pentru Udarea Ardeiului")
-st.markdown("---")
-
-# ========== BARA LATERALĂ ==========
-with st.sidebar:
-    st.header("⚙️ Configurație")
-    
-    suprafata = st.number_input("Suprafață (mp)", value=350, step=10)
-    debit_pompa = st.number_input("Debit pompă (l/h)", value=5640, step=100)
-    
-    st.markdown("---")
-    
-    stadiu_curent = st.selectbox(
-        "Stadiul curent",
-        ["Plantare", "Vegetativ", "Inflorire", "Maturare", "Pre-recoltare"],
-        index=2
-    )
-    
-    ultima_udare = st.date_input(
-        "Ultima udare",
-        value=datetime.date(2025, 3, 28)
-    )
-    
-    st.markdown("---")
-    
-    st.subheader("🌤️ Prognoză meteo")
-    oras = st.text_input("Oraș", value="Bucharest")
-    api_key = st.text_input("API Key OpenWeatherMap", type="password")
-    
-    st.markdown("---")
-    st.subheader("📊 Filtre grafice")
-    zile_istoric = st.slider("Perioadă istoric (zile)", 7, 90, 30)
-    
-    if st.button("🔄 Actualizează datele", use_container_width=True):
-        st.rerun()
-
-# ========== FUNCȚII ==========
-def get_weather(oras, api_key):
-    if not api_key or api_key == "":
+# ========== FUNCȚIE PROGNOZĂ METEO ==========
+def get_weather_forecast():
+    """Fetch current weather using OpenWeatherMap API (works with st.secrets on cloud)."""
+    try:
+        # Pe cloud, citește din st.secrets
+        api_key = st.secrets["6aba5e7b4cf5ad67ff42cbe8e7cd240b"]
+    except:
+        # Dacă rulezi local fără secrets, returnează None
         return None
-    url = f"https://api.openweathermap.org/data/2.5/weather?q={oras}&appid={api_key}&units=metric&lang=ro"
+    
+    city = "Fardea"  # Schimbă cu orașul tău
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric&lang=ro"
+    
     try:
         response = requests.get(url, timeout=10)
         data = response.json()
@@ -91,6 +44,7 @@ def get_weather(oras, api_key):
     except:
         return None
 
+# ========== FUNCȚII AJUTĂTOARE ==========
 def calculeaza_necesar(stadiu, zile_scurse, suprafata):
     necesar_zilnic = {
         "Plantare": 4, "Vegetativ": 5, "Inflorire": 7,
@@ -118,6 +72,44 @@ def incarca_predictii_ai():
             return []
     return []
 
+# ========== BARA LATERALĂ ==========
+with st.sidebar:
+    st.header("⚙️ Configurație")
+    
+    suprafata = st.number_input("Suprafață (mp)", value=350, step=10)
+    debit_pompa = st.number_input("Debit pompă (l/h)", value=5640, step=100)
+    
+    st.markdown("---")
+    
+    stadiu_curent = st.selectbox(
+        "Stadiul curent",
+        ["Plantare", "Vegetativ", "Inflorire", "Maturare", "Pre-recoltare"],
+        index=2
+    )
+    
+    ultima_udare = st.date_input(
+        "Ultima udare",
+        value=datetime.date(2025, 3, 28)
+    )
+    
+    st.markdown("---")
+    
+    st.subheader("🌤️ Prognoză meteo în timp real")
+    if st.button("🔍 Verifică vremea acum", use_container_width=True):
+        with st.spinner("Se preia prognoza..."):
+            weather_data = get_weather_forecast()
+            if weather_data:
+                st.success(f"**{weather_data['temperatura']:.1f}°C** | 💧 {weather_data['umiditate']}%")
+                st.caption(f"📝 {weather_data['descriere'].capitalize()}")
+            else:
+                st.error("Nu s-a putut obține prognoza. Verifică cheia API în Secrets.")
+    else:
+        st.info("Apasă butonul de mai sus pentru a vedea prognoza actualizată.")
+    
+    st.markdown("---")
+    st.subheader("📊 Filtre grafice")
+    zile_istoric = st.slider("Perioadă istoric (zile)", 7, 90, 30)
+
 # ========== CALCULE PRINCIPALE ==========
 astazi = datetime.date.today()
 zile_scurse = max(0, (astazi - ultima_udare).days)
@@ -127,7 +119,6 @@ trebuie_udat = necesar_total >= prag_udare
 timp_udare = int((necesar_total / debit_pompa) * 60) if trebuie_udat else 0
 timp_sector = (timp_udare + 1) // 2
 
-prognoza = get_weather(oras, api_key) if api_key else None
 istoric = incarca_istoric()
 predictii_ai = incarca_predictii_ai()
 
@@ -146,10 +137,7 @@ with col3:
     else:
         st.metric("🌱 Recomandare", "AȘTEAPTĂ")
 with col4:
-    if prognoza:
-        st.metric("🌡️ Temperatură", f"{prognoza['temperatura']:.1f}°C", prognoza['descriere'])
-    else:
-        st.metric("🌱 Stadiu", stadiu_curent)
+    st.metric("🌱 Stadiu", stadiu_curent)
 
 if trebuie_udat:
     st.info(f"💧 **Recomandare udare:** {timp_udare} minute total\n\n- Sector 1: {timp_sector} minute\n- Sector 2: {timp_udare - timp_sector} minute")
@@ -187,7 +175,7 @@ if istoric:
 
 st.markdown("---")
 
-# ========== RÂNDUL 3 - GRAFICE PREDICȚII AI ==========
+# ========== RÂNDUL 3 - PREDICȚII AI ==========
 if predictii_ai:
     st.subheader("🤖 Analiza predicțiilor AI")
     
@@ -218,18 +206,13 @@ if predictii_ai:
 
 st.markdown("---")
 
-# ========== RÂNDUL 4 - GRAFICE NOI ==========
+# ========== RÂNDUL 4 - ANALIZE AVANSATE ==========
 st.subheader("📊 Analize avansate")
 
 if istoric:
-    df_istoric = pd.DataFrame(istoric)
-    df_istoric['data'] = pd.to_datetime(df_istoric['data'])
-    df_istoric = df_istoric.sort_values('data')
-    
     col1, col2 = st.columns(2)
     
     with col1:
-        # Grafic cu bare - zile între udări
         if 'zile_de_la_udare' in df_istoric.columns:
             fig5 = px.bar(
                 df_istoric, x='data', y='zile_de_la_udare',
@@ -241,7 +224,6 @@ if istoric:
             st.plotly_chart(fig5, use_container_width=True)
     
     with col2:
-        # Distribuția necesarului
         fig6 = px.histogram(
             df_istoric, x='necesar_acumulat',
             title='Distribuția necesarului de apă',
@@ -253,101 +235,70 @@ if istoric:
 
 st.markdown("---")
 
-# ========== RÂNDUL 5 - GRAFICE TEMPERATURĂ ȘI SEZON ==========
+# ========== RÂNDUL 5 - TEMPERATURĂ ȘI SEZON ==========
 st.subheader("🌡️ Analiză sezonieră")
 
-if istoric:
+if predictii_ai:
     col1, col2 = st.columns(2)
     
     with col1:
         # Boxplot pe luni
-        df_istoric['luna'] = pd.to_datetime(df_istoric['data']).dt.month
+        df_predictii['luna'] = pd.to_datetime(df_predictii['data']).dt.month
         fig7 = px.box(
-            df_istoric, x='luna', y='necesar_acumulat',
-            title='Necesar lunar (boxplot)',
-            labels={'luna': 'Luna', 'necesar_acumulat': 'Litri'}
+            df_predictii, x='luna', y='minute_recomandate',
+            title='Minute recomandate pe luni (boxplot)',
+            labels={'luna': 'Luna', 'minute_recomandate': 'Minute'}
         )
         st.plotly_chart(fig7, use_container_width=True)
     
     with col2:
-        # Heatmap corelații
-        if 'temperatura' in df_predictii.columns:
-            df_corr = df_predictii[['minute_recomandate', 'temperatura', 'zile_de_la_udare']].corr()
-            fig8 = px.imshow(
-                df_corr,
-                text_auto=True,
-                title='Matricea de corelație',
-                color_continuous_scale='RdBu',
-                zmin=-1, zmax=1
-            )
-            st.plotly_chart(fig8, use_container_width=True)
-
-st.markdown("---")
-
-# ========== RÂNDUL 6 - GRAFICE COMPARATIVE ==========
-st.subheader("📉 Comparații și tendințe")
-
-if predictii_ai and istoric:
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Evoluție temperatură
-        fig9 = px.line(
-            df_predictii, x='data', y='temperatura',
-            title='Evoluția temperaturii în timp',
-            labels={'data': 'Data', 'temperatura': 'Temperatură (°C)'}
+        # Matrice corelație
+        df_corr = df_predictii[['minute_recomandate', 'temperatura', 'zile_de_la_udare']].corr()
+        fig8 = px.imshow(
+            df_corr,
+            text_auto=True,
+            title='Matricea de corelație',
+            color_continuous_scale='RdBu',
+            zmin=-1, zmax=1
         )
-        fig9.update_traces(line_color='#f39c12', line_width=2)
-        st.plotly_chart(fig9, use_container_width=True)
-    
-    with col2:
-        # Precipitații vs recomandare
-        if 'precipitatii' in df_predictii.columns:
-            fig10 = px.bar(
-                df_predictii, x='data', y='precipitatii',
-                title='Precipitații înregistrate',
-                labels={'data': 'Data', 'precipitatii': 'mm'}
-            )
-            fig10.update_traces(marker_color='#3498db')
-            st.plotly_chart(fig10, use_container_width=True)
+        st.plotly_chart(fig8, use_container_width=True)
 
 st.markdown("---")
 
-# ========== RÂNDUL 7 - SUBPLOT COMPLEX ==========
-st.subheader("📈 Dashboard integrat")
-
+# ========== RÂNDUL 6 - SUBPLOT COMPLEX ==========
 if predictii_ai and len(predictii_ai) > 5:
-    # Subplot cu 3 grafice
-    fig11 = make_subplots(
+    st.subheader("📈 Dashboard integrat")
+    
+    fig9 = make_subplots(
         rows=3, cols=1,
         subplot_titles=('Temperatură', 'Minute recomandate', 'Zile de la udare'),
         shared_xaxes=True
     )
     
-    fig11.add_trace(
+    fig9.add_trace(
         go.Scatter(x=df_predictii['data'], y=df_predictii['temperatura'],
                    mode='lines+markers', name='Temperatură', line=dict(color='#f39c12')),
         row=1, col=1
     )
     
-    fig11.add_trace(
+    fig9.add_trace(
         go.Scatter(x=df_predictii['data'], y=df_predictii['minute_recomandate'],
                    mode='lines+markers', name='Minute udare', line=dict(color='#e74c3c')),
         row=2, col=1
     )
     
-    fig11.add_trace(
+    fig9.add_trace(
         go.Scatter(x=df_predictii['data'], y=df_predictii['zile_de_la_udare'],
                    mode='lines+markers', name='Zile de la udare', line=dict(color='#2ecc71')),
         row=3, col=1
     )
     
-    fig11.update_layout(height=800, title_text="Analiza completă a culturii")
-    st.plotly_chart(fig11, use_container_width=True)
+    fig9.update_layout(height=800, title_text="Analiza completă a culturii")
+    st.plotly_chart(fig9, use_container_width=True)
 
 st.markdown("---")
 
-# ========== RÂNDUL 8 - ISTORIC ==========
+# ========== ISTORIC ==========
 st.subheader("📋 Istoric complet")
 
 if istoric:
@@ -359,7 +310,7 @@ else:
 
 st.markdown("---")
 
-# ========== RÂNDUL 9 - RECOMANDĂRI ==========
+# ========== RECOMANDĂRI ==========
 st.subheader("💡 Recomandări personalizate")
 
 recomandari = {
