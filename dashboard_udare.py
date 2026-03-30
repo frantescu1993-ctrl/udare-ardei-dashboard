@@ -19,29 +19,29 @@ st.set_page_config(
 
 # ========== FUNCȚIE PROGNOZĂ METEO ==========
 def get_weather_forecast():
-    """Fetch current weather using OpenWeatherMap API (works with st.secrets on cloud)."""
     try:
-        # Pe cloud, citește din st.secrets
-        api_key = st.secrets["6aba5e7b4cf5ad67ff42cbe8e7cd240b"]
-    except:
-        # Dacă rulezi local fără secrets, returnează None
+        api_key = st.secrets["OPENWEATHER_API_KEY"]
+    except Exception as e:
+        st.error(f"Nu s-a putut citi secretul: {e}")
         return None
     
-    city = "Fardea"  # Schimbă cu orașul tău
+    city = "Bucharest"
     url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric&lang=ro"
     
     try:
         response = requests.get(url, timeout=10)
-        data = response.json()
-        if data.get('cod') != 200:
+        st.write(f"Status code: {response.status_code}")  # afișează codul HTTP
+        if response.status_code != 200:
+            st.error(f"Răspuns API: {response.text}")  # afișează eroarea detaliată
             return None
+        data = response.json()
         return {
             'temperatura': data['main']['temp'],
             'umiditate': data['main']['humidity'],
             'descriere': data['weather'][0]['description'],
-            'icon': data['weather'][0]['icon']
         }
-    except:
+    except Exception as e:
+        st.error(f"Eroare conexiune: {e}")
         return None
 
 # ========== FUNCȚII AJUTĂTOARE ==========
