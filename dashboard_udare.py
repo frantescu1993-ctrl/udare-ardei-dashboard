@@ -1,5 +1,5 @@
-# dashboard_udare.py - Sistem AI pentru legume (udare, fertilizare, tratamente)
-# Suportă multiple culturi, ajustare climatică, prognoză meteo, grafice interactive
+# dashboard_udare.py - Sistem AI pentru legume, arbori și arbuști
+# Suportă calcul pe suprafață (mp) sau pe bucată
 
 import streamlit as st
 import pandas as pd
@@ -13,28 +13,86 @@ import requests
 
 # ========== CONFIGURAȚIE PAGINĂ ==========
 st.set_page_config(
-    page_title="🌱 Sistem AI pentru Legume",
+    page_title="🌱 AgroAI - Sistem inteligent pentru plante",
     page_icon="🌱",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
+# ========== CSS PERSONALIZAT ==========
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    .main { background-color: #f8fafc; }
+    .card {
+        background-color: white;
+        border-radius: 1rem;
+        padding: 1.2rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 1rem;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    .metric-card {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border-left: 5px solid #22c55e;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        text-align: center;
+    }
+    .warning-card { background: linear-gradient(135deg, #fef9c3 0%, #fef08a 100%); border-left: 5px solid #eab308; }
+    .danger-card { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-left: 5px solid #ef4444; }
+    .info-card { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left: 5px solid #0ea5e9; }
+    .stButton > button {
+        background-color: #22c55e;
+        color: white;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        border: none;
+        padding: 0.5rem 1rem;
+    }
+    .stButton > button:hover { background-color: #16a34a; transform: scale(1.02); box-shadow: 0 2px 8px rgba(34,197,94,0.3); }
+    [data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #e2e8f0; }
+    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 { color: #166534; }
+    .dataframe { border-radius: 0.75rem; overflow: hidden; font-size: 0.9rem; }
+    .dataframe th { background-color: #f1f5f9 !important; color: #0f172a; font-weight: 600; }
+    .main-title {
+        font-size: 2.2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #15803d, #4ade80);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        margin-bottom: 0.5rem;
+    }
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #14532d;
+        border-left: 4px solid #22c55e;
+        padding-left: 0.8rem;
+        margin: 1.5rem 0 1rem 0;
+    }
+    hr { margin: 1rem 0; border: 0; height: 1px; background: linear-gradient(90deg, #e2e8f0, #22c55e, #e2e8f0); }
+    .weather-card { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: 1rem; padding: 1rem; text-align: center; }
+</style>
+""", unsafe_allow_html=True)
+
 # ========== FUNCȚII GENERALE ==========
 @st.cache_data(ttl=3600)
 def incarca_culturi():
-    """Încarcă fișierul culturi.csv și returnează un DataFrame."""
     try:
         df = pd.read_csv('culturi.csv')
-        # Coloanele obligatorii (dacă lipsesc, se adaugă cu valori implicite)
-        required = [
-            'nume', 'suprafata', 'adancime_radacina_cm', 'coeficient_evaporare',
-            'temp_opt_min', 'temp_opt_max',
-            'necesar_plantare', 'necesar_vegetativ', 'necesar_inflorire',
-            'necesar_maturare', 'necesar_pre_recoltare', 'prag_udare_litri_mp'
-        ]
+        # Normalizare coloane
+        required = ['nume', 'tip_cultura', 'adancime_radacina_cm', 'coeficient_evaporare',
+                    'temp_opt_min', 'temp_opt_max', 'necesar_plantare', 'necesar_vegetativ',
+                    'necesar_inflorire', 'necesar_maturare', 'necesar_pre_recoltare']
         for col in required:
             if col not in df.columns:
-                st.warning(f"Coloana '{col}' lipsește din culturi.csv. Se adaugă cu valoare implicită.")
+                st.warning(f"Coloana '{col}' lipsește. Se adaugă implicit.")
                 if col.startswith('necesar'):
                     df[col] = 5
                 elif col == 'adancime_radacina_cm':
@@ -45,16 +103,19 @@ def incarca_culturi():
                     df[col] = 15
                 elif col == 'temp_opt_max':
                     df[col] = 30
-                elif col == 'prag_udare_litri_mp':
-                    df[col] = 20
                 else:
                     df[col] = 0
-
-        # Coloane opționale pentru fertilizare/tratamente
-        optional = [
-            'fertilizare_frecventa_zile', 'fertilizare_doza_kg_mp',
-            'fertilizare_produs', 'tratamente_fungicide', 'tratamente_insecticide'
-        ]
+        # Coloane specifice
+        if 'suprafata_mp' not in df.columns:
+            df['suprafata_mp'] = 0
+        if 'numar_bucati' not in df.columns:
+            df['numar_bucati'] = 0
+        if 'prag_udare_litri_mp' not in df.columns:
+            df['prag_udare_litri_mp'] = 20
+        if 'prag_udare_litri_buc' not in df.columns:
+            df['prag_udare_litri_buc'] = 0
+        optional = ['fertilizare_frecventa_zile', 'fertilizare_doza_kg_mp', 'fertilizare_doza_kg_buc',
+                    'fertilizare_produs', 'tratamente_fungicide', 'tratamente_insecticide']
         for col in optional:
             if col not in df.columns:
                 df[col] = None
@@ -64,10 +125,12 @@ def incarca_culturi():
         return pd.DataFrame()
 
 def get_parametri_cultura(nume_cultura, df_culturi):
-    """Returnează un dicționar cu toți parametrii specifici culturii."""
     row = df_culturi[df_culturi['nume'] == nume_cultura].iloc[0]
+    tip = row['tip_cultura']
     return {
-        'suprafata': float(row['suprafata']),
+        'tip': tip,
+        'suprafata': float(row['suprafata_mp']) if tip == 'leguma' else 0,
+        'numar_bucati': int(row['numar_bucati']) if tip != 'leguma' else 0,
         'adancime_radacina': float(row['adancime_radacina_cm']),
         'coeficient_evaporare': float(row['coeficient_evaporare']),
         'temp_opt_min': float(row['temp_opt_min']),
@@ -80,20 +143,21 @@ def get_parametri_cultura(nume_cultura, df_culturi):
             'Pre-recoltare': float(row['necesar_pre_recoltare'])
         },
         'prag_udare_litri_mp': float(row['prag_udare_litri_mp']),
+        'prag_udare_litri_buc': float(row['prag_udare_litri_buc']),
         'fertilizare_frecventa_zile': row['fertilizare_frecventa_zile'] if not pd.isna(row['fertilizare_frecventa_zile']) else None,
         'fertilizare_doza_kg_mp': float(row['fertilizare_doza_kg_mp']) if not pd.isna(row['fertilizare_doza_kg_mp']) else None,
+        'fertilizare_doza_kg_buc': float(row['fertilizare_doza_kg_buc']) if not pd.isna(row['fertilizare_doza_kg_buc']) else None,
         'fertilizare_produs': row['fertilizare_produs'] if not pd.isna(row['fertilizare_produs']) else None,
         'tratamente_fungicide': row['tratamente_fungicide'] if not pd.isna(row['tratamente_fungicide']) else None,
         'tratamente_insecticide': row['tratamente_insecticide'] if not pd.isna(row['tratamente_insecticide']) else None
     }
 
 def get_weather_forecast():
-    """Obține prognoza meteo curentă folosind OpenWeatherMap API (necesită secret)."""
     try:
         api_key = st.secrets["OPENWEATHER_API_KEY"]
     except:
         return None
-    city = "Bucharest"  # Poți face configurabil
+    city = "Bucharest"
     url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric&lang=ro"
     try:
         response = requests.get(url, timeout=10)
@@ -110,29 +174,29 @@ def get_weather_forecast():
         return None
 
 def ajusteaza_necesar(necesar_baza, temperatura, temp_opt_min, temp_opt_max, coeficient_evaporare):
-    """
-    Ajustează necesarul zilnic de apă (litri/mp) în funcție de:
-    - temperatura curentă față de intervalul optim
-    - coeficientul de evaporare specific culturii
-    """
     if temperatura is None:
         return necesar_baza * coeficient_evaporare
-
-    # Corecție termică
     if temperatura < temp_opt_min:
-        factor_temp = 0.8   # udare redusă la frig
+        factor_temp = 0.8
     elif temperatura > temp_opt_max:
-        factor_temp = 1.3   # udare crescută la căldură
+        factor_temp = 1.3
     else:
         factor_temp = 1.0
-
     return necesar_baza * factor_temp * coeficient_evaporare
 
-def calculeaza_necesar(suprafata, necesar_pe_zi_ajustat, zile_scurse):
-    return suprafata * necesar_pe_zi_ajustat * zile_scurse
+def calculeaza_necesar_total(params, necesar_pe_zi_ajustat, zile_scurse):
+    if params['tip'] == 'leguma':
+        return params['suprafata'] * necesar_pe_zi_ajustat * zile_scurse
+    else:
+        return params['numar_bucati'] * necesar_pe_zi_ajustat * zile_scurse
+
+def prag_udare_total(params):
+    if params['tip'] == 'leguma':
+        return params['suprafata'] * params['prag_udare_litri_mp']
+    else:
+        return params['numar_bucati'] * params['prag_udare_litri_buc']
 
 def incarca_istoric(cultura):
-    """Încarcă istoricul udărilor din fișierul JSON specific culturii."""
     nume_fisier = f"istoric_{cultura.lower().replace(' ', '_')}.json"
     if os.path.exists(nume_fisier):
         try:
@@ -143,7 +207,6 @@ def incarca_istoric(cultura):
     return []
 
 def incarca_predictii_ai(cultura):
-    """Încarcă predicțiile AI din fișierul JSON specific culturii."""
     nume_fisier = f"predictii_{cultura.lower().replace(' ', '_')}.json"
     if os.path.exists(nume_fisier):
         try:
@@ -154,7 +217,6 @@ def incarca_predictii_ai(cultura):
     return []
 
 def incarca_tratamente(cultura):
-    """Încarcă istoricul tratamentelor din fișierul JSON specific culturii."""
     nume_fisier = f"tratamente_{cultura.lower().replace(' ', '_')}.json"
     if os.path.exists(nume_fisier):
         try:
@@ -165,7 +227,6 @@ def incarca_tratamente(cultura):
     return []
 
 def salveaza_tratament(cultura, tratament):
-    """Salvează un tratament în fișierul JSON specific culturii."""
     tratamente = incarca_tratamente(cultura)
     tratamente.append(tratament)
     nume_fisier = f"tratamente_{cultura.lower().replace(' ', '_')}.json"
@@ -174,49 +235,52 @@ def salveaza_tratament(cultura, tratament):
 
 # ========== BARA LATERALĂ ==========
 with st.sidebar:
-    st.header("⚙️ Configurație")
-
-    # Încarcă lista de culturi
+    st.image("https://cdn-icons-png.flaticon.com/512/1995/1995572.png", width=60)
+    st.markdown("<h2 style='text-align: center; color: #15803d;'>🌱 AgroAI</h2>", unsafe_allow_html=True)
+    st.markdown("---")
+    
     df_culturi = incarca_culturi()
     if df_culturi.empty:
         st.stop()
-
-    nume_cultura = st.selectbox("🌿 Selectează cultura", df_culturi['nume'].tolist())
+    
+    nume_cultura = st.selectbox("🌿 Selectează planta", df_culturi['nume'].tolist())
     params = get_parametri_cultura(nume_cultura, df_culturi)
-
-    # Afișează parametrii specifici
-    with st.expander("📋 Parametrii culturii"):
-        st.write(f"**Suprafață:** {params['suprafata']} mp")
+    
+    with st.expander("📋 Parametrii plantei"):
+        if params['tip'] == 'leguma':
+            st.write(f"**Tip:** Legumă")
+            st.write(f"**Suprafață:** {params['suprafata']} mp")
+        else:
+            st.write(f"**Tip:** {'Arbore' if params['tip'] == 'arbore' else 'Arbust'}")
+            st.write(f"**Număr bucăți:** {params['numar_bucati']}")
         st.write(f"**Adâncime rădăcină:** {params['adancime_radacina']} cm")
         st.write(f"**Coeficient evaporare:** {params['coeficient_evaporare']}")
         st.write(f"**Temperatură optimă:** {params['temp_opt_min']}°C – {params['temp_opt_max']}°C")
-        st.write(f"**Prag udare:** {params['prag_udare_litri_mp']} litri/mp")
-        st.write("**Necesar zilnic (litri/mp/zi):**")
+        if params['tip'] == 'leguma':
+            st.write(f"**Prag udare:** {params['prag_udare_litri_mp']} litri/mp")
+        else:
+            st.write(f"**Prag udare:** {params['prag_udare_litri_buc']} litri/bucată")
+        st.write("**Necesar zilnic (litri/unitate):**")
         for stadiu, val in params['necesar'].items():
             st.write(f"  - {stadiu}: {val}")
-
+    
     st.markdown("---")
-
-    # Permite suprascrierea suprafeței
-    suprafata = st.number_input("Suprafață (mp)", value=float(params['suprafata']), step=10.0)
-
-    debit_pompa = st.number_input("Debit pompă (l/h)", value=5640, step=100, min_value=1)
-
+    if params['tip'] == 'leguma':
+        suprafata = st.number_input("📏 Suprafață (mp)", value=float(params['suprafata']), step=10.0)
+        numar_bucati = 0
+    else:
+        numar_bucati = st.number_input("🌳 Număr bucăți", value=int(params['numar_bucati']), step=1, min_value=1)
+        suprafata = 0
+    debit_pompa = st.number_input("💧 Debit pompă (l/h)", value=5640, step=100, min_value=1)
     st.markdown("---")
-
     stadiu_curent = st.selectbox(
-        "Stadiul curent",
+        "🌱 Stadiul curent",
         ["Plantare", "Vegetativ", "Inflorire", "Maturare", "Pre-recoltare"],
         index=2
     )
-
-    ultima_udare = st.date_input(
-        "Ultima udare",
-        value=datetime.date.today() - datetime.timedelta(days=3)
-    )
-
+    ultima_udare = st.date_input("📅 Ultima udare", value=datetime.date.today() - datetime.timedelta(days=3))
     st.markdown("---")
-
+    
     st.subheader("🌤️ Prognoză meteo")
     if st.button("🔍 Verifică vremea acum", use_container_width=True):
         with st.spinner("Se preia prognoza..."):
@@ -226,7 +290,7 @@ with st.sidebar:
                 st.caption(f"{weather['descriere'].capitalize()}")
                 st.session_state.weather = weather
             else:
-                st.error("Nu s-a putut obține prognoza. Verifică cheia API în Secrets.")
+                st.error("Nu s-a putut obține prognoza. Verifică cheia API.")
                 st.session_state.weather = None
     else:
         if 'weather' not in st.session_state:
@@ -235,18 +299,16 @@ with st.sidebar:
             st.success(f"**{st.session_state.weather['temperatura']:.1f}°C** | 💧 {st.session_state.weather['umiditate']}%")
             st.caption(f"{st.session_state.weather['descriere'].capitalize()}")
         else:
-            st.info("Apasă butonul de mai sus pentru a vedea prognoza actualizată.")
-
+            st.info("Apasă butonul pentru prognoză.")
+    
     st.markdown("---")
-
-    # Secțiune pentru înregistrarea tratamentelor
     st.subheader("🧪 Înregistrează tratament")
     with st.form("form_tratament"):
         tip_tratament = st.selectbox("Tip tratament", ["Fertilizare", "Fungicid", "Insecticit", "Altul"])
         produs = st.text_input("Produs")
-        doza = st.number_input("Doză (kg/mp sau litri)", min_value=0.0, step=0.01, format="%.2f")
+        doza = st.number_input("Doză (kg/unitate sau litri)", min_value=0.0, step=0.01, format="%.2f")
         observatii = st.text_area("Observații")
-        submitted = st.form_submit_button("Salvează")
+        submitted = st.form_submit_button("💾 Salvează")
         if submitted:
             tratament = {
                 "data": datetime.date.today().isoformat(),
@@ -257,19 +319,18 @@ with st.sidebar:
             }
             salveaza_tratament(nume_cultura, tratament)
             st.success(f"Tratament înregistrat pentru {nume_cultura}")
-
+    
     st.markdown("---")
     st.subheader("📊 Filtre grafice")
     zile_istoric = st.slider("Perioadă istoric (zile)", 7, 90, 30)
 
-# ========== OBȚINE DATELE METEO CURENTE ==========
+# ========== OBȚINE DATELE METEO ==========
 weather = st.session_state.get('weather', None)
 temperatura = weather['temperatura'] if weather else None
 
 # ========== CALCULE PRINCIPALE ==========
 astazi = datetime.date.today()
 zile_scurse = max(0, (astazi - ultima_udare).days)
-
 necesar_pe_zi_baza = params['necesar'][stadiu_curent]
 necesar_pe_zi_ajustat = ajusteaza_necesar(
     necesar_pe_zi_baza,
@@ -278,166 +339,200 @@ necesar_pe_zi_ajustat = ajusteaza_necesar(
     params['temp_opt_max'],
     params['coeficient_evaporare']
 )
-necesar_total = calculeaza_necesar(suprafata, necesar_pe_zi_ajustat, zile_scurse)
-prag_udare_total = suprafata * params['prag_udare_litri_mp']
-trebuie_udat = necesar_total >= prag_udare_total
+# Suprascrie cantitatea (suprafata sau nr bucati) cu valorile din UI
+if params['tip'] == 'leguma':
+    params['suprafata'] = suprafata
+else:
+    params['numar_bucati'] = numar_bucati
+necesar_total = calculeaza_necesar_total(params, necesar_pe_zi_ajustat, zile_scurse)
+prag_total = prag_udare_total(params)
+trebuie_udat = necesar_total >= prag_total
 if debit_pompa > 0:
     timp_udare = int((necesar_total / debit_pompa) * 60) if trebuie_udat else 0
 else:
     timp_udare = 0
 timp_sector = (timp_udare + 1) // 2
 
-# Încarcă datele specifice culturii
 istoric = incarca_istoric(nume_cultura)
 predictii_ai = incarca_predictii_ai(nume_cultura)
 tratamente = incarca_tratamente(nume_cultura)
 
-# ========== KPI-URI ==========
-st.subheader(f"📊 Starea curentă – {nume_cultura}")
+# ========== TITLU PRINCIPAL ==========
+st.markdown("<div class='main-title'>🌱 AgroAI - Sistem inteligent pentru plante</div>", unsafe_allow_html=True)
+st.caption("Monitorizare udare, fertilizare și tratamente asistate de AI")
 
+# ========== KPI-URI ==========
+st.markdown("---")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.metric("📅 Zile de la ultima udare", f"{zile_scurse} zile")
+    st.markdown(f"""
+    <div class='metric-card'>
+        <h3 style='margin:0; color:#15803d;'>📅 {zile_scurse}</h3>
+        <p style='margin:0; color:#14532d;'>zile de la ultima udare</p>
+    </div>
+    """, unsafe_allow_html=True)
 with col2:
-    st.metric("💧 Necesar acumulat", f"{int(necesar_total):,} litri")
+    st.markdown(f"""
+    <div class='metric-card'>
+        <h3 style='margin:0; color:#15803d;'>💧 {int(necesar_total):,}</h3>
+        <p style='margin:0; color:#14532d;'>litri necesari acumulați</p>
+    </div>
+    """, unsafe_allow_html=True)
 with col3:
     if trebuie_udat:
-        st.metric("🚨 Recomandare", "UDĂ ACUM!", delta=f"{timp_udare} min", delta_color="inverse")
+        st.markdown(f"""
+        <div class='metric-card danger-card'>
+            <h3 style='margin:0; color:#dc2626;'>🚨 UDĂ ACUM!</h3>
+            <p style='margin:0;'>{timp_udare} minute</p>
+        </div>
+        """, unsafe_allow_html=True)
     else:
-        st.metric("🌱 Recomandare", "AȘTEAPTĂ")
+        st.markdown(f"""
+        <div class='metric-card'>
+            <h3 style='margin:0; color:#15803d;'>🌱 AȘTEAPTĂ</h3>
+            <p style='margin:0;'>udare neesențială</p>
+        </div>
+        """, unsafe_allow_html=True)
 with col4:
-    st.metric("🌡️ Stadiu", stadiu_curent)
+    st.markdown(f"""
+    <div class='metric-card'>
+        <h3 style='margin:0; color:#15803d;'>🌡️ {stadiu_curent}</h3>
+        <p style='margin:0;'>stadiu fenologic</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if trebuie_udat:
-    st.info(f"💧 **Recomandare udare:** {timp_udare} minute total\n\n- Sector 1: {timp_sector} minute\n- Sector 2: {timp_udare - timp_sector} minute")
+    st.markdown(f"""
+    <div class='card warning-card' style='margin-top: 0.5rem;'>
+        💧 <strong>Recomandare udare:</strong> {timp_udare} minute total<br>
+        ➤ Sector 1: {timp_sector} minute &nbsp;&nbsp;|&nbsp;&nbsp; ➤ Sector 2: {timp_udare - timp_sector} minute
+    </div>
+    """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# ========== GRAFICE PRINCIPALE ==========
-st.subheader("📈 Evoluție și tendințe")
+# ========== GRAFICE ȘI ANALIZE (identice cu versiunea anterioară) ==========
+# ... păstrează aici toate secțiunile de grafice, predicții AI, analize avansate, etc.
+# Pentru a economisi spațiu, le includ din nou mai jos (sunt aceleași ca în codul anterior).
 
+st.markdown("<div class='section-title'>📈 Evoluție și tendințe</div>", unsafe_allow_html=True)
 if istoric:
     df_istoric = pd.DataFrame(istoric)
     df_istoric['data'] = pd.to_datetime(df_istoric['data'])
     df_istoric = df_istoric.sort_values('data')
     df_istoric = df_istoric.tail(zile_istoric)
-
     col1, col2 = st.columns(2)
     with col1:
         fig1 = px.line(df_istoric, x='data', y='necesar_acumulat',
                        title='Evoluția necesarului de apă',
-                       labels={'data': 'Data', 'necesar_acumulat': 'Litri'})
-        fig1.update_traces(line_color='#2ecc71', line_width=2)
+                       labels={'data': 'Data', 'necesar_acumulat': 'Litri'},
+                       template='plotly_white')
+        fig1.update_traces(line_color='#22c55e', line_width=3)
+        fig1.update_layout(plot_bgcolor='rgba(0,0,0,0)', hovermode='x unified')
         st.plotly_chart(fig1, use_container_width=True)
     with col2:
         fig2 = px.area(df_istoric, x='data', y='necesar_acumulat',
                        title='Necesar cumulat (arie)',
-                       labels={'data': 'Data', 'necesar_acumulat': 'Litri'})
-        fig2.update_traces(fillcolor='rgba(46,204,113,0.3)', line_color='#2ecc71')
+                       labels={'data': 'Data', 'necesar_acumulat': 'Litri'},
+                       template='plotly_white')
+        fig2.update_traces(fillcolor='rgba(34,197,94,0.2)', line_color='#22c55e')
         st.plotly_chart(fig2, use_container_width=True)
 else:
-    st.info("Nu există date istorice pentru această cultură. Rulează scriptul de predicție pentru a genera istoric.")
+    st.info("Nu există date istorice pentru această plantă. Rulează scriptul de predicție.")
 
 st.markdown("---")
-
-# ========== GRAFICE PREDICȚII AI ==========
+st.markdown("<div class='section-title'>🤖 Analiza predicțiilor AI</div>", unsafe_allow_html=True)
 if predictii_ai:
-    st.subheader("🤖 Analiza predicțiilor AI")
     df_pred = pd.DataFrame(predictii_ai)
     df_pred['data'] = pd.to_datetime(df_pred['data'])
     df_pred = df_pred.sort_values('data')
     df_pred = df_pred.tail(zile_istoric)
-
     col1, col2 = st.columns(2)
     with col1:
         fig3 = px.line(df_pred, x='data', y='minute_recomandate',
                        title='Minute recomandate de AI',
-                       labels={'data': 'Data', 'minute_recomandate': 'Minute'})
-        fig3.update_traces(line_color='#e74c3c', line_width=2)
+                       labels={'data': 'Data', 'minute_recomandate': 'Minute'},
+                       template='plotly_white')
+        fig3.update_traces(line_color='#ef4444', line_width=3)
         st.plotly_chart(fig3, use_container_width=True)
     with col2:
         if 'temperatura' in df_pred.columns:
             fig4 = px.scatter(df_pred, x='temperatura', y='minute_recomandate',
                               title='Corelație temperatură - recomandare AI',
                               labels={'temperatura': 'Temperatură (°C)', 'minute_recomandate': 'Minute'},
-                              trendline='ols')
+                              trendline='ols', template='plotly_white')
             st.plotly_chart(fig4, use_container_width=True)
         else:
             st.info("Nu există date suficiente pentru corelație.")
 else:
-    st.info("Nu există predicții AI pentru această cultură.")
+    st.info("Nu există predicții AI pentru această plantă.")
 
 st.markdown("---")
-
-# ========== ANALIZE AVANSATE (dacă există date) ==========
 if istoric:
-    st.subheader("📊 Analize avansate")
+    st.markdown("<div class='section-title'>📊 Analize avansate</div>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         if 'zile_de_la_udare' in df_istoric.columns:
             fig5 = px.bar(df_istoric, x='data', y='zile_de_la_udare',
                           title='Zile între udări',
                           labels={'data': 'Data', 'zile_de_la_udare': 'Zile'},
-                          color='zile_de_la_udare', color_continuous_scale='Viridis')
+                          color='zile_de_la_udare', color_continuous_scale='Viridis',
+                          template='plotly_white')
             st.plotly_chart(fig5, use_container_width=True)
         else:
-            st.info("Coloana 'zile_de_la_udare' lipsește din istoric.")
+            st.info("Coloana 'zile_de_la_udare' lipsește.")
     with col2:
         fig6 = px.histogram(df_istoric, x='necesar_acumulat',
                             title='Distribuția necesarului de apă',
                             labels={'necesar_acumulat': 'Litri', 'count': 'Frecvență'},
-                            nbins=20, color_discrete_sequence=['#3498db'])
+                            nbins=20, color_discrete_sequence=['#3b82f6'],
+                            template='plotly_white')
         st.plotly_chart(fig6, use_container_width=True)
+    st.markdown("---")
 
-st.markdown("---")
-
-# ========== ANALIZĂ SEZONIERĂ ==========
 if predictii_ai and len(df_pred) > 5:
-    st.subheader("🌡️ Analiză sezonieră")
+    st.markdown("<div class='section-title'>🌡️ Analiză sezonieră</div>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         df_pred['luna'] = pd.to_datetime(df_pred['data']).dt.month
         fig7 = px.box(df_pred, x='luna', y='minute_recomandate',
                       title='Minute recomandate pe luni',
-                      labels={'luna': 'Luna', 'minute_recomandate': 'Minute'})
+                      labels={'luna': 'Luna', 'minute_recomandate': 'Minute'},
+                      template='plotly_white')
         st.plotly_chart(fig7, use_container_width=True)
     with col2:
         if 'temperatura' in df_pred.columns and 'minute_recomandate' in df_pred.columns and 'zile_de_la_udare' in df_pred.columns:
             df_corr = df_pred[['minute_recomandate', 'temperatura', 'zile_de_la_udare']].corr()
             fig8 = px.imshow(df_corr, text_auto=True,
                              title='Matricea de corelație',
-                             color_continuous_scale='RdBu', zmin=-1, zmax=1)
+                             color_continuous_scale='RdBu', zmin=-1, zmax=1,
+                             template='plotly_white')
             st.plotly_chart(fig8, use_container_width=True)
         else:
-            st.info("Nu există suficiente date pentru matricea de corelație.")
+            st.info("Date insuficiente pentru corelație.")
+    st.markdown("---")
 
-st.markdown("---")
-
-# ========== DASHBOARD INTEGRAT (SUBPLOT) ==========
 if predictii_ai and len(df_pred) > 5:
-    st.subheader("📈 Dashboard integrat")
+    st.markdown("<div class='section-title'>📈 Dashboard integrat</div>", unsafe_allow_html=True)
     fig9 = make_subplots(rows=3, cols=1,
                          subplot_titles=('Temperatură', 'Minute recomandate', 'Zile de la udare'),
                          shared_xaxes=True)
     fig9.add_trace(go.Scatter(x=df_pred['data'], y=df_pred['temperatura'],
-                              mode='lines+markers', name='Temperatură', line=dict(color='#f39c12')),
+                              mode='lines+markers', name='Temperatură', line=dict(color='#f59e0b', width=2)),
                    row=1, col=1)
     fig9.add_trace(go.Scatter(x=df_pred['data'], y=df_pred['minute_recomandate'],
-                              mode='lines+markers', name='Minute udare', line=dict(color='#e74c3c')),
+                              mode='lines+markers', name='Minute udare', line=dict(color='#ef4444', width=2)),
                    row=2, col=1)
     if 'zile_de_la_udare' in df_pred.columns:
         fig9.add_trace(go.Scatter(x=df_pred['data'], y=df_pred['zile_de_la_udare'],
-                                  mode='lines+markers', name='Zile de la udare', line=dict(color='#2ecc71')),
+                                  mode='lines+markers', name='Zile de la udare', line=dict(color='#10b981', width=2)),
                        row=3, col=1)
-    fig9.update_layout(height=800, title_text="Analiza completă a culturii")
+    fig9.update_layout(height=800, title_text="Analiza completă a plantei", template='plotly_white')
     st.plotly_chart(fig9, use_container_width=True)
-
-st.markdown("---")
+    st.markdown("---")
 
 # ========== RECOMANDĂRI FERTILIZARE ȘI TRATAMENTE ==========
-st.subheader("🧪 Recomandări tratamente și fertilizare")
-
-# Calcul pentru fertilizare
+st.markdown("<div class='section-title'>🧪 Recomandări tratamente și fertilizare</div>", unsafe_allow_html=True)
 frecventa_fertilizare = params.get('fertilizare_frecventa_zile')
 if frecventa_fertilizare is not None and frecventa_fertilizare > 0:
     ultima_fertilizare = None
@@ -449,49 +544,49 @@ if frecventa_fertilizare is not None and frecventa_fertilizare > 0:
                     break
                 except:
                     pass
+    doza_recomandata = params['fertilizare_doza_kg_buc'] if params['tip'] != 'leguma' else params['fertilizare_doza_kg_mp']
+    unitate = "kg/buc" if params['tip'] != 'leguma' else "kg/mp"
     if ultima_fertilizare is None:
-        st.warning(f"📢 Nu s-a înregistrat nicio fertilizare pentru {nume_cultura}. Recomandare: aplică **{params['fertilizare_produs']}** (doză {params['fertilizare_doza_kg_mp']} kg/mp) la fiecare {frecventa_fertilizare} zile.")
+        st.warning(f"📢 Nu s-a înregistrat nicio fertilizare pentru {nume_cultura}. Recomandare: aplică **{params['fertilizare_produs']}** (doză {doza_recomandata} {unitate}) la fiecare {frecventa_fertilizare} zile.")
     else:
         zile_ultima = (datetime.date.today() - ultima_fertilizare).days
         if zile_ultima >= frecventa_fertilizare:
-            st.error(f"⚠️ A trecut {zile_ultima} zile de la ultima fertilizare. Aplică acum **{params['fertilizare_produs']}** (doză {params['fertilizare_doza_kg_mp']} kg/mp).")
+            st.error(f"⚠️ A trecut {zile_ultima} zile de la ultima fertilizare. Aplică acum **{params['fertilizare_produs']}** (doză {doza_recomandata} {unitate}).")
         else:
             st.success(f"✅ Ultima fertilizare: acum {zile_ultima} zile. Următoarea peste {frecventa_fertilizare - zile_ultima} zile.")
 else:
-    st.info("Nu există recomandări de fertilizare configurate pentru această cultură.")
+    st.info("Nu există recomandări de fertilizare configurate pentru această plantă.")
 
-# Afișează recomandări fungicide/insecticide
 if params.get('tratamente_fungicide') and not pd.isna(params['tratamente_fungicide']):
     st.info(f"🍄 **Recomandare fungicid:** {params['tratamente_fungicide']}")
 if params.get('tratamente_insecticide') and not pd.isna(params['tratamente_insecticide']):
     st.info(f"🐛 **Recomandare insecticid:** {params['tratamente_insecticide']}")
 
 # ========== ISTORIC TRATAMENTE ==========
-st.subheader("📜 Istoric tratamente")
+st.markdown("<div class='section-title'>📜 Istoric tratamente</div>", unsafe_allow_html=True)
 if tratamente:
     df_trat = pd.DataFrame(tratamente)
     df_trat['data'] = pd.to_datetime(df_trat['data'])
     df_trat = df_trat.sort_values('data', ascending=False)
     st.dataframe(df_trat, use_container_width=True)
 else:
-    st.info("Nu există tratamente înregistrate pentru această cultură.")
+    st.info("Nu există tratamente înregistrate pentru această plantă.")
 
 st.markdown("---")
 
 # ========== ISTORIC UDĂRI ==========
-st.subheader("📋 Istoric complet udări")
+st.markdown("<div class='section-title'>📋 Istoric complet udări</div>", unsafe_allow_html=True)
 if istoric:
     df_afisare = pd.DataFrame(istoric).tail(20)
     df_afisare = df_afisare.sort_values('data', ascending=False)
     st.dataframe(df_afisare, use_container_width=True)
 else:
-    st.info("Nu există date istorice pentru această cultură. Rulează scriptul de predicție.")
+    st.info("Nu există date istorice pentru această plantă.")
 
 st.markdown("---")
 
-# ========== RECOMANDĂRI PERSONALIZATE (stadiu) ==========
-st.subheader("💡 Recomandări personalizate")
-
+# ========== RECOMANDĂRI PERSONALIZATE ==========
+st.markdown("<div class='section-title'>💡 Recomandări personalizate</div>", unsafe_allow_html=True)
 recomandari = {
     "Plantare": "🌱 Udează zilnic sau la 2 zile pentru a asigura prinderea rădăcinilor.",
     "Vegetativ": "🌿 Udează mai rar (1-2 ori/săptămână), dar mai abundent pentru rădăcini adânci.",
@@ -501,13 +596,11 @@ recomandari = {
 }
 st.success(recomandari.get(stadiu_curent, ""))
 
-# Afișează un rezumat al ajustării
 if temperatura is not None:
-    st.caption(f"🌡️ Ajustare necesar: {necesar_pe_zi_baza:.1f} → {necesar_pe_zi_ajustat:.1f} litri/mp/zi (temp. {temperatura:.1f}°C, evaporare x{params['coeficient_evaporare']})")
+    st.caption(f"🌡️ Ajustare necesar: {necesar_pe_zi_baza:.1f} → {necesar_pe_zi_ajustat:.1f} litri/unitate/zi (temp. {temperatura:.1f}°C, evaporare x{params['coeficient_evaporare']})")
 else:
-    st.caption(f"🌡️ Ajustare necesar: {necesar_pe_zi_baza:.1f} → {necesar_pe_zi_ajustat:.1f} litri/mp/zi (evaporare x{params['coeficient_evaporare']})")
+    st.caption(f"🌡️ Ajustare necesar: {necesar_pe_zi_baza:.1f} → {necesar_pe_zi_ajustat:.1f} litri/unitate/zi (evaporare x{params['coeficient_evaporare']})")
 
-# ========== FOOTER ==========
 st.markdown("---")
 st.caption(f"📅 Ultima actualizare: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-st.caption("🌱 Sistem AI pentru legume - Datele sunt salvate local în fișiere JSON specifice culturii.")
+st.caption("🌱 AgroAI - Datele sunt salvate local în fișiere JSON specifice fiecărei plante.")
