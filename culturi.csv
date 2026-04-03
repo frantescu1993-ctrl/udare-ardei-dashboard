@@ -1,7 +1,5 @@
-nume,suprafata,necesar_plantare,necesar_vegetativ,necesar_inflorire,necesar_maturare,necesar_pre_recoltare,prag_udare_litri_mp
-Ardei,350,4,5,7,3,0,20
-Rosii,400,5,6,8,4,0,22
-Castraveti,300,6,7,9,5,0,25
-Vinete,250,4,5,7,3,0,20
-Ardei_iute,150,3,4,6,2,0,18
-Fasole,200,3,4,5,2,0,15
+nume,suprafata,adancime_radacina_cm,coeficient_evaporare,temp_opt_min,temp_opt_max,necesar_plantare,necesar_vegetativ,necesar_inflorire,necesar_maturare,necesar_pre_recoltare,prag_udare_litri_mp,fertilizare_frecventa_zile,fertilizare_doza_kg_mp,fertilizare_produs,tratamente_fungicide,tratamente_insecticide
+Ardei,350,40,1.2,18,30,4,5,7,3,0,20,14,0.05,NPK 20-20-20,preventiv la 20 zile,numai la nevoie
+Rosii,400,50,1.3,18,28,5,6,8,4,0,22,10,0.07,NPK 15-15-30,preventiv la 15 zile,la apariția afidelor
+Castraveti,300,30,1.4,20,30,6,7,9,5,0,25,7,0.06,NPK 20-20-20,preventiv la 14 zile,la nevoie
+Vinete,250,40,1.2,20,32,4,5,7,3,0,20,14,0.05,NPK 20-20-20,preventiv la 20 zile,numai la nevoie
