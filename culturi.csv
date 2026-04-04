@@ -1,13 +1,15 @@
-nume,tip_cultura,suprafata_mp,numar_bucati,adancime_radacina_cm,coeficient_evaporare,temp_opt_min,temp_opt_max,necesar_plantare,necesar_vegetativ,necesar_inflorire,necesar_maturare,necesar_pre_recoltare,prag_udare_litri_mp,prag_udare_litri_buc,fertilizare_frecventa_zile,fertilizare_doza_kg_mp,fertilizare_doza_kg_buc,fertilizare_produs,tratamente_fungicide,tratamente_insecticide
-Ardei,leguma,350,,40,1.2,18,30,4,5,7,3,0,20,,14,0.05,,NPK 20-20-20,preventiv la 20 zile,numai la nevoie
-Rosii,leguma,400,,50,1.3,18,28,5,6,8,4,0,22,,10,0.07,,NPK 15-15-30,preventiv la 15 zile,la apariția afidelor
-Castraveti,leguma,300,,30,1.4,20,30,6,7,9,5,0,25,,7,0.06,,NPK 20-20-20,preventiv la 14 zile,la nevoie
-Pepene,leguma,500,,60,1.4,22,35,5,6,8,4,0,25,,14,0.08,,NPK 20-20-20,preventiv la 20 zile,la nevoie
-Cartof,leguma,300,,40,1.2,15,25,4,5,6,3,0,18,,14,0.06,,NPK 15-15-15,preventiv la 15 zile,la apariția gândacului
-Mar,arbore,,10,80,1.0,15,28,50,70,90,60,20,,50,30,,0.5,NPK 12-12-12,preventiv la 30 zile,la apariția păduchelui
-Par,arbore,,8,70,1.0,15,28,45,65,85,55,20,,45,30,,0.45,NPK 12-12-12,preventiv la 30 zile,la nevoie
-Cires,arbore,,6,60,1.1,12,25,40,60,80,50,15,,35,30,,0.4,NPK 12-12-12,preventiv la 20 zile,la nevoie
-Prun,arbore,,12,70,1.0,14,26,45,65,85,55,18,,40,30,,0.45,NPK 12-12-12,preventiv la 25 zile,la nevoie
-Zmeura,arbust,,20,40,1.3,15,28,5,7,9,5,0,,15,14,,0.08,NPK 20-20-20,preventiv la 20 zile,la nevoie
-Coacaza,arbust,,15,35,1.2,12,25,4,6,8,4,0,,12,14,,0.06,NPK 20-20-20,preventiv la 20 zile,la nevoie
-Afin,arbust,,25,30,1.3,10,24,5,7,9,5,0,,18,14,,0.07,NPK 20-20-20,preventiv la 20 zile,la nevoie
+nume,tip_cultura,suprafata_mp,numar_bucati,adancime_radacina_cm,coeficient_evaporare,temp_opt_min,temp_opt_max,necesar_plantare,necesar_vegetativ,necesar_inflorire,necesar_maturare,necesar_pre_recoltare,prag_udare_litri_mp,prag_udare_litri_buc,tratament_fertilizare_interval_zile,tratament_fertilizare_doza,tratament_fertilizare_produs,tratament_fungicid_interval_zile,tratament_fungicid_produs,tratament_insecticid_interval_zile,tratament_insecticid_produs
+Ardei,leguma,350,,40,1.2,18,30,4,5,7,3,0,20,,14,0.05,NPK 20-20-20,20,Oxiclorura de cupru,0,-
+Rosii,leguma,400,,50,1.3,18,28,5,6,8,4,0,22,,10,0.07,NPK 15-15-30,15,Mancozeb,7,Vertimec
+Castraveti,leguma,300,,30,1.4,20,30,6,7,9,5,0,25,,7,0.06,NPK 20-20-20,14,Aliette,0,-
+Pepene,leguma,500,,60,1.4,22,35,5,6,8,4,0,25,,14,0.08,NPK 20-20-20,20,Oxiclorura de cupru,0,-
+Cartof,leguma,300,,40,1.2,15,25,4,5,6,3,0,18,,14,0.06,NPK 15-15-15,15,Mancozeb,10,Actara
+Mar,arbore,,10,80,1.0,15,28,50,70,90,60,20,,50,30,0.5,NPK 12-12-12,30,Captan,20,Confidor
+Par,arbore,,8,70,1.0,15,28,45,65,85,55,20,,45,30,0.45,NPK 12-12-12,30,Captan,0,-
+Cires,arbore,,6,60,1.1,12,25,40,60,80,50,15,,35,30,0.4,NPK 12-12-12,20,Score,0,-
+Prun,arbore,,12,70,1.0,14,26,45,65,85,55,18,,40,30,0.45,NPK 12-12-12,25,Chorus,0,-
+Zmeura,arbust,,20,40,1.3,15,28,5,7,9,5,0,,15,14,0.08,NPK 20-20-20,20,Switch,0,-
+Coacaza,arbust,,15,35,1.2,12,25,4,6,8,4,0,,12,14,0.06,NPK 20-20-20,20,Topas,0,-
+Afin,arbust,,25,30,1.3,10,24,5,7,9,5,0,,18,14,0.07,NPK 20-20-20,20,Switch,0,-
+Nuc,arbore,0,5,100,1.0,15,30,30,50,70,40,10,0,50,30,0.5,NPK 12-12-12,20,Captan,0,-
+Viță de vie,arbust,0,50,60,1.2,15,35,10,15,25,15,5,0,20,14,0.1,NPK 15-15-15,14,Sulf/Ridomil,0,-

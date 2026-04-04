@@ -1,5 +1,5 @@
 # dashboard_udare.py - Sistem AI pentru legume, arbori și arbuști
-# Suportă calcul pe suprafață (mp) sau pe bucată
+# Versiune finală cu design modern, suport complet pentru multiple culturi și tratamente
 
 import streamlit as st
 import pandas as pd
@@ -19,65 +19,204 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ========== CSS PERSONALIZAT ==========
+# ========== CSS PERSONALIZAT AVANSAT ==========
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-    .main { background-color: #f8fafc; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
+    }
+    .main {
+        background: linear-gradient(135deg, #f0f9f0 0%, #e6f3e6 100%);
+    }
+    
     .card {
-        background-color: white;
-        border-radius: 1rem;
-        padding: 1.2rem;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        transition: transform 0.2s, box-shadow 0.2s;
-        border: 1px solid #e2e8f0;
+        background: linear-gradient(145deg, #ffffff 0%, #fafdfa 100%);
+        border-radius: 1.5rem;
+        padding: 1.25rem;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.03), 0 2px 4px rgba(0,0,0,0.05);
+        transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+        border: 1px solid rgba(16, 185, 129, 0.2);
         margin-bottom: 1rem;
     }
-    .card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 30px -12px rgba(16, 185, 129, 0.25);
+        border-color: rgba(16, 185, 129, 0.5);
+    }
+    
     .metric-card {
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-        border-left: 5px solid #22c55e;
-        border-radius: 0.75rem;
-        padding: 1rem;
+        background: linear-gradient(145deg, #ffffff 0%, #f9fff9 100%);
+        border-radius: 1.5rem;
+        padding: 1.2rem;
         text-align: center;
-    }
-    .warning-card { background: linear-gradient(135deg, #fef9c3 0%, #fef08a 100%); border-left: 5px solid #eab308; }
-    .danger-card { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-left: 5px solid #ef4444; }
-    .info-card { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left: 5px solid #0ea5e9; }
-    .stButton > button {
-        background-color: #22c55e;
-        color: white;
-        border-radius: 0.5rem;
-        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        border-bottom: 4px solid #10b981;
         transition: all 0.2s;
-        border: none;
-        padding: 0.5rem 1rem;
     }
-    .stButton > button:hover { background-color: #16a34a; transform: scale(1.02); box-shadow: 0 2px 8px rgba(34,197,94,0.3); }
-    [data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #e2e8f0; }
-    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 { color: #166534; }
-    .dataframe { border-radius: 0.75rem; overflow: hidden; font-size: 0.9rem; }
-    .dataframe th { background-color: #f1f5f9 !important; color: #0f172a; font-weight: 600; }
-    .main-title {
+    .metric-card:hover {
+        transform: translateY(-3px);
+        border-bottom-width: 5px;
+        border-bottom-color: #059669;
+    }
+    .metric-number {
         font-size: 2.2rem;
+        font-weight: 800;
+        color: #047857;
+        margin: 0;
+        line-height: 1.2;
+    }
+    .metric-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #4b5563;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 0.5rem;
+    }
+    
+    .warning-card {
+        background: linear-gradient(145deg, #fffbeb, #fef3c7);
+        border-left: 5px solid #f59e0b;
+        border-radius: 1rem;
+        padding: 1rem;
+    }
+    .danger-card {
+        background: linear-gradient(145deg, #fef2f2, #fee2e2);
+        border-left: 5px solid #ef4444;
+        border-radius: 1rem;
+        padding: 1rem;
+    }
+    .info-card {
+        background: linear-gradient(145deg, #eff6ff, #dbeafe);
+        border-left: 5px solid #3b82f6;
+        border-radius: 1rem;
+        padding: 1rem;
+    }
+    
+    .stButton > button {
+        background: linear-gradient(95deg, #10b981 0%, #059669 100%);
+        color: white;
+        border: none;
+        border-radius: 2rem;
+        padding: 0.5rem 1.2rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .stButton > button:hover {
+        transform: scale(1.02);
+        box-shadow: 0 8px 16px -6px #10b98180;
+        background: linear-gradient(95deg, #059669 0%, #047857 100%);
+    }
+    
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+        border-right: 1px solid #e5e7eb;
+        padding: 1rem 0.5rem;
+    }
+    [data-testid="stSidebar"] h1, 
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] h3 {
+        color: #065f46;
         font-weight: 700;
-        background: linear-gradient(135deg, #15803d, #4ade80);
+    }
+    [data-testid="stSidebar"] .stSelectbox label,
+    [data-testid="stSidebar"] .stNumberInput label {
+        font-weight: 600;
+        color: #166534;
+    }
+    
+    .main-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #047857 0%, #10b981 100%);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.2rem;
+        letter-spacing: -0.02em;
     }
     .section-title {
         font-size: 1.5rem;
-        font-weight: 600;
-        color: #14532d;
-        border-left: 4px solid #22c55e;
-        padding-left: 0.8rem;
-        margin: 1.5rem 0 1rem 0;
+        font-weight: 700;
+        color: #064e3b;
+        border-left: 5px solid #10b981;
+        padding-left: 1rem;
+        margin: 1.8rem 0 1rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
-    hr { margin: 1rem 0; border: 0; height: 1px; background: linear-gradient(90deg, #e2e8f0, #22c55e, #e2e8f0); }
-    .weather-card { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: 1rem; padding: 1rem; text-align: center; }
+    
+    hr {
+        margin: 1.2rem 0;
+        border: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #10b981, #10b981, #10b981, transparent);
+    }
+    
+    .dataframe {
+        border-radius: 1rem;
+        overflow: hidden;
+        font-size: 0.85rem;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .dataframe th {
+        background-color: #ecfdf5 !important;
+        color: #064e3b;
+        font-weight: 700;
+    }
+    .dataframe tr:hover {
+        background-color: #f0fdf4 !important;
+    }
+    
+    .streamlit-expanderHeader {
+        font-weight: 600;
+        background-color: #ecfdf5;
+        border-radius: 0.75rem;
+        color: #065f46;
+    }
+    .streamlit-expanderHeader:hover {
+        background-color: #d1fae5;
+    }
+    
+    .weather-card {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: white;
+        border-radius: 1rem;
+        padding: 0.8rem;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .stForm {
+        background-color: #ffffffcc;
+        padding: 0.5rem;
+        border-radius: 1rem;
+        border: 1px solid #d1d5db;
+    }
+    
+    .stSlider .stSlider > div {
+        color: #10b981;
+    }
+    .stSlider .stSlider > div > div {
+        background-color: #10b981;
+    }
+    
+    .stNumberInput input {
+        border-radius: 0.5rem;
+        border-color: #d1d5db;
+    }
+    .stNumberInput input:focus {
+        border-color: #10b981;
+        box-shadow: 0 0 0 2px #10b98120;
+    }
+    
+    .stSelectbox div[data-baseweb="select"] {
+        border-radius: 0.5rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -86,7 +225,6 @@ st.markdown("""
 def incarca_culturi():
     try:
         df = pd.read_csv('culturi.csv')
-        # Normalizare coloane
         required = ['nume', 'tip_cultura', 'adancime_radacina_cm', 'coeficient_evaporare',
                     'temp_opt_min', 'temp_opt_max', 'necesar_plantare', 'necesar_vegetativ',
                     'necesar_inflorire', 'necesar_maturare', 'necesar_pre_recoltare']
@@ -105,7 +243,6 @@ def incarca_culturi():
                     df[col] = 30
                 else:
                     df[col] = 0
-        # Coloane specifice
         if 'suprafata_mp' not in df.columns:
             df['suprafata_mp'] = 0
         if 'numar_bucati' not in df.columns:
@@ -114,9 +251,13 @@ def incarca_culturi():
             df['prag_udare_litri_mp'] = 20
         if 'prag_udare_litri_buc' not in df.columns:
             df['prag_udare_litri_buc'] = 0
-        optional = ['fertilizare_frecventa_zile', 'fertilizare_doza_kg_mp', 'fertilizare_doza_kg_buc',
-                    'fertilizare_produs', 'tratamente_fungicide', 'tratamente_insecticide']
-        for col in optional:
+        tratamente_cols = [
+            'tratament_fertilizare_interval_zile', 'tratament_fertilizare_doza',
+            'tratament_fertilizare_produs', 'tratament_fungicid_interval_zile',
+            'tratament_fungicid_produs', 'tratament_insecticid_interval_zile',
+            'tratament_insecticid_produs'
+        ]
+        for col in tratamente_cols:
             if col not in df.columns:
                 df[col] = None
         return df
@@ -144,12 +285,13 @@ def get_parametri_cultura(nume_cultura, df_culturi):
         },
         'prag_udare_litri_mp': float(row['prag_udare_litri_mp']),
         'prag_udare_litri_buc': float(row['prag_udare_litri_buc']),
-        'fertilizare_frecventa_zile': row['fertilizare_frecventa_zile'] if not pd.isna(row['fertilizare_frecventa_zile']) else None,
-        'fertilizare_doza_kg_mp': float(row['fertilizare_doza_kg_mp']) if not pd.isna(row['fertilizare_doza_kg_mp']) else None,
-        'fertilizare_doza_kg_buc': float(row['fertilizare_doza_kg_buc']) if not pd.isna(row['fertilizare_doza_kg_buc']) else None,
-        'fertilizare_produs': row['fertilizare_produs'] if not pd.isna(row['fertilizare_produs']) else None,
-        'tratamente_fungicide': row['tratamente_fungicide'] if not pd.isna(row['tratamente_fungicide']) else None,
-        'tratamente_insecticide': row['tratamente_insecticide'] if not pd.isna(row['tratamente_insecticide']) else None
+        'tratament_fertilizare_interval_zile': row['tratament_fertilizare_interval_zile'] if not pd.isna(row['tratament_fertilizare_interval_zile']) else None,
+        'tratament_fertilizare_doza': float(row['tratament_fertilizare_doza']) if not pd.isna(row['tratament_fertilizare_doza']) else None,
+        'tratament_fertilizare_produs': row['tratament_fertilizare_produs'] if not pd.isna(row['tratament_fertilizare_produs']) else None,
+        'tratament_fungicid_interval_zile': row['tratament_fungicid_interval_zile'] if not pd.isna(row['tratament_fungicid_interval_zile']) else None,
+        'tratament_fungicid_produs': row['tratament_fungicid_produs'] if not pd.isna(row['tratament_fungicid_produs']) else None,
+        'tratament_insecticid_interval_zile': row['tratament_insecticid_interval_zile'] if not pd.isna(row['tratament_insecticid_interval_zile']) else None,
+        'tratament_insecticid_produs': row['tratament_insecticid_produs'] if not pd.isna(row['tratament_insecticid_produs']) else None
     }
 
 def get_weather_forecast():
@@ -235,18 +377,20 @@ def salveaza_tratament(cultura, tratament):
 
 # ========== BARA LATERALĂ ==========
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/1995/1995572.png", width=60)
-    st.markdown("<h2 style='text-align: center; color: #15803d;'>🌱 AgroAI</h2>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; margin-bottom: 1rem;'>", unsafe_allow_html=True)
+    st.image("https://cdn-icons-png.flaticon.com/512/1995/1995572.png", width=70)
+    st.markdown("<h2 style='text-align: center; color: #15803d; font-weight: 700;'>🌱 AgroAI</h2>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("---")
     
     df_culturi = incarca_culturi()
     if df_culturi.empty:
         st.stop()
     
-    nume_cultura = st.selectbox("🌿 Selectează planta", df_culturi['nume'].tolist())
+    nume_cultura = st.selectbox("🌿 **Selectează planta**", df_culturi['nume'].tolist())
     params = get_parametri_cultura(nume_cultura, df_culturi)
     
-    with st.expander("📋 Parametrii plantei"):
+    with st.expander("📋 **Parametrii plantei**"):
         if params['tip'] == 'leguma':
             st.write(f"**Tip:** Legumă")
             st.write(f"**Suprafață:** {params['suprafata']} mp")
@@ -266,22 +410,22 @@ with st.sidebar:
     
     st.markdown("---")
     if params['tip'] == 'leguma':
-        suprafata = st.number_input("📏 Suprafață (mp)", value=float(params['suprafata']), step=10.0)
+        suprafata = st.number_input("📏 **Suprafață (mp)**", value=float(params['suprafata']), step=10.0)
         numar_bucati = 0
     else:
-        numar_bucati = st.number_input("🌳 Număr bucăți", value=int(params['numar_bucati']), step=1, min_value=1)
+        numar_bucati = st.number_input("🌳 **Număr bucăți**", value=int(params['numar_bucati']), step=1, min_value=1)
         suprafata = 0
-    debit_pompa = st.number_input("💧 Debit pompă (l/h)", value=5640, step=100, min_value=1)
+    debit_pompa = st.number_input("💧 **Debit pompă (l/h)**", value=5640, step=100, min_value=1)
     st.markdown("---")
     stadiu_curent = st.selectbox(
-        "🌱 Stadiul curent",
+        "🌱 **Stadiul curent**",
         ["Plantare", "Vegetativ", "Inflorire", "Maturare", "Pre-recoltare"],
         index=2
     )
-    ultima_udare = st.date_input("📅 Ultima udare", value=datetime.date.today() - datetime.timedelta(days=3))
+    ultima_udare = st.date_input("📅 **Ultima udare**", value=datetime.date.today() - datetime.timedelta(days=3))
     st.markdown("---")
     
-    st.subheader("🌤️ Prognoză meteo")
+    st.subheader("🌤️ **Prognoză meteo**")
     if st.button("🔍 Verifică vremea acum", use_container_width=True):
         with st.spinner("Se preia prognoza..."):
             weather = get_weather_forecast()
@@ -302,13 +446,13 @@ with st.sidebar:
             st.info("Apasă butonul pentru prognoză.")
     
     st.markdown("---")
-    st.subheader("🧪 Înregistrează tratament")
+    st.subheader("🧪 **Înregistrează tratament**")
     with st.form("form_tratament"):
         tip_tratament = st.selectbox("Tip tratament", ["Fertilizare", "Fungicid", "Insecticit", "Altul"])
         produs = st.text_input("Produs")
         doza = st.number_input("Doză (kg/unitate sau litri)", min_value=0.0, step=0.01, format="%.2f")
         observatii = st.text_area("Observații")
-        submitted = st.form_submit_button("💾 Salvează")
+        submitted = st.form_submit_button("💾 **Salvează**")
         if submitted:
             tratament = {
                 "data": datetime.date.today().isoformat(),
@@ -321,7 +465,7 @@ with st.sidebar:
             st.success(f"Tratament înregistrat pentru {nume_cultura}")
     
     st.markdown("---")
-    st.subheader("📊 Filtre grafice")
+    st.subheader("📊 **Filtre grafice**")
     zile_istoric = st.slider("Perioadă istoric (zile)", 7, 90, 30)
 
 # ========== OBȚINE DATELE METEO ==========
@@ -339,7 +483,6 @@ necesar_pe_zi_ajustat = ajusteaza_necesar(
     params['temp_opt_max'],
     params['coeficient_evaporare']
 )
-# Suprascrie cantitatea (suprafata sau nr bucati) cu valorile din UI
 if params['tip'] == 'leguma':
     params['suprafata'] = suprafata
 else:
@@ -359,45 +502,50 @@ tratamente = incarca_tratamente(nume_cultura)
 
 # ========== TITLU PRINCIPAL ==========
 st.markdown("<div class='main-title'>🌱 AgroAI - Sistem inteligent pentru plante</div>", unsafe_allow_html=True)
-st.caption("Monitorizare udare, fertilizare și tratamente asistate de AI")
+st.markdown("<p style='margin-top: -0.5rem; color: #4b5563;'>Monitorizare udare, fertilizare și tratamente asistate de AI</p>", unsafe_allow_html=True)
+st.markdown("---")
 
 # ========== KPI-URI ==========
-st.markdown("---")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.markdown(f"""
     <div class='metric-card'>
-        <h3 style='margin:0; color:#15803d;'>📅 {zile_scurse}</h3>
-        <p style='margin:0; color:#14532d;'>zile de la ultima udare</p>
+        <div style='font-size: 2rem;'>📅</div>
+        <div class='metric-number'>{zile_scurse}</div>
+        <div class='metric-label'>zile de la ultima udare</div>
     </div>
     """, unsafe_allow_html=True)
 with col2:
     st.markdown(f"""
     <div class='metric-card'>
-        <h3 style='margin:0; color:#15803d;'>💧 {int(necesar_total):,}</h3>
-        <p style='margin:0; color:#14532d;'>litri necesari acumulați</p>
+        <div style='font-size: 2rem;'>💧</div>
+        <div class='metric-number'>{int(necesar_total):,}</div>
+        <div class='metric-label'>litri necesari acumulați</div>
     </div>
     """, unsafe_allow_html=True)
 with col3:
     if trebuie_udat:
         st.markdown(f"""
-        <div class='metric-card danger-card'>
-            <h3 style='margin:0; color:#dc2626;'>🚨 UDĂ ACUM!</h3>
-            <p style='margin:0;'>{timp_udare} minute</p>
+        <div class='metric-card' style='border-bottom-color: #ef4444;'>
+            <div style='font-size: 2rem;'>🚨</div>
+            <div class='metric-number' style='color: #dc2626;'>UDĂ ACUM!</div>
+            <div class='metric-label'>{timp_udare} minute</div>
         </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown(f"""
         <div class='metric-card'>
-            <h3 style='margin:0; color:#15803d;'>🌱 AȘTEAPTĂ</h3>
-            <p style='margin:0;'>udare neesențială</p>
+            <div style='font-size: 2rem;'>🌱</div>
+            <div class='metric-number'>AȘTEAPTĂ</div>
+            <div class='metric-label'>udare neesențială</div>
         </div>
         """, unsafe_allow_html=True)
 with col4:
     st.markdown(f"""
     <div class='metric-card'>
-        <h3 style='margin:0; color:#15803d;'>🌡️ {stadiu_curent}</h3>
-        <p style='margin:0;'>stadiu fenologic</p>
+        <div style='font-size: 2rem;'>🌡️</div>
+        <div class='metric-number'>{stadiu_curent}</div>
+        <div class='metric-label'>stadiu fenologic</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -405,16 +553,14 @@ if trebuie_udat:
     st.markdown(f"""
     <div class='card warning-card' style='margin-top: 0.5rem;'>
         💧 <strong>Recomandare udare:</strong> {timp_udare} minute total<br>
-        ➤ Sector 1: {timp_sector} minute &nbsp;&nbsp;|&nbsp;&nbsp; ➤ Sector 2: {timp_udare - timp_sector} minute
+        ➤ <strong>Sector 1:</strong> {timp_sector} minute &nbsp;&nbsp;|&nbsp;&nbsp; 
+        ➤ <strong>Sector 2:</strong> {timp_udare - timp_sector} minute
     </div>
     """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# ========== GRAFICE ȘI ANALIZE (identice cu versiunea anterioară) ==========
-# ... păstrează aici toate secțiunile de grafice, predicții AI, analize avansate, etc.
-# Pentru a economisi spațiu, le includ din nou mai jos (sunt aceleași ca în codul anterior).
-
+# ========== GRAFICE ȘI ANALIZE ==========
 st.markdown("<div class='section-title'>📈 Evoluție și tendințe</div>", unsafe_allow_html=True)
 if istoric:
     df_istoric = pd.DataFrame(istoric)
@@ -427,7 +573,7 @@ if istoric:
                        title='Evoluția necesarului de apă',
                        labels={'data': 'Data', 'necesar_acumulat': 'Litri'},
                        template='plotly_white')
-        fig1.update_traces(line_color='#22c55e', line_width=3)
+        fig1.update_traces(line_color='#10b981', line_width=3)
         fig1.update_layout(plot_bgcolor='rgba(0,0,0,0)', hovermode='x unified')
         st.plotly_chart(fig1, use_container_width=True)
     with col2:
@@ -435,7 +581,7 @@ if istoric:
                        title='Necesar cumulat (arie)',
                        labels={'data': 'Data', 'necesar_acumulat': 'Litri'},
                        template='plotly_white')
-        fig2.update_traces(fillcolor='rgba(34,197,94,0.2)', line_color='#22c55e')
+        fig2.update_traces(fillcolor='rgba(16,185,129,0.2)', line_color='#10b981')
         st.plotly_chart(fig2, use_container_width=True)
 else:
     st.info("Nu există date istorice pentru această plantă. Rulează scriptul de predicție.")
@@ -531,36 +677,58 @@ if predictii_ai and len(df_pred) > 5:
     st.plotly_chart(fig9, use_container_width=True)
     st.markdown("---")
 
-# ========== RECOMANDĂRI FERTILIZARE ȘI TRATAMENTE ==========
-st.markdown("<div class='section-title'>🧪 Recomandări tratamente și fertilizare</div>", unsafe_allow_html=True)
-frecventa_fertilizare = params.get('fertilizare_frecventa_zile')
-if frecventa_fertilizare is not None and frecventa_fertilizare > 0:
-    ultima_fertilizare = None
-    if tratamente:
-        for t in reversed(tratamente):
-            if t.get('tip') == 'Fertilizare':
-                try:
-                    ultima_fertilizare = datetime.date.fromisoformat(t['data'])
-                    break
-                except:
-                    pass
-    doza_recomandata = params['fertilizare_doza_kg_buc'] if params['tip'] != 'leguma' else params['fertilizare_doza_kg_mp']
-    unitate = "kg/buc" if params['tip'] != 'leguma' else "kg/mp"
-    if ultima_fertilizare is None:
-        st.warning(f"📢 Nu s-a înregistrat nicio fertilizare pentru {nume_cultura}. Recomandare: aplică **{params['fertilizare_produs']}** (doză {doza_recomandata} {unitate}) la fiecare {frecventa_fertilizare} zile.")
-    else:
-        zile_ultima = (datetime.date.today() - ultima_fertilizare).days
-        if zile_ultima >= frecventa_fertilizare:
-            st.error(f"⚠️ A trecut {zile_ultima} zile de la ultima fertilizare. Aplică acum **{params['fertilizare_produs']}** (doză {doza_recomandata} {unitate}).")
-        else:
-            st.success(f"✅ Ultima fertilizare: acum {zile_ultima} zile. Următoarea peste {frecventa_fertilizare - zile_ultima} zile.")
-else:
-    st.info("Nu există recomandări de fertilizare configurate pentru această plantă.")
+# ========== SCHEMA COMPLETĂ DE TRATAMENTE ==========
+st.markdown("<div class='section-title'>📅 Schema completă de tratamente</div>", unsafe_allow_html=True)
 
-if params.get('tratamente_fungicide') and not pd.isna(params['tratamente_fungicide']):
-    st.info(f"🍄 **Recomandare fungicid:** {params['tratamente_fungicide']}")
-if params.get('tratamente_insecticide') and not pd.isna(params['tratamente_insecticide']):
-    st.info(f"🐛 **Recomandare insecticid:** {params['tratamente_insecticide']}")
+def get_urmatorul_tratament(tratamente, tip_tratament, interval_zile, produs_recomandat, doza_recomandata, unitate):
+    ultima_aplicare = None
+    for t in reversed(tratamente):
+        if t.get('tip') == tip_tratament:
+            try:
+                ultima_aplicare = datetime.date.fromisoformat(t['data'])
+                break
+            except:
+                pass
+    if ultima_aplicare is None:
+        return f"📢 Nu s-a înregistrat nicio aplicare de **{tip_tratament}**. Recomandare: aplică **{produs_recomandat}** (doză {doza_recomandata} {unitate}) la fiecare {interval_zile} zile."
+    else:
+        zile_ultima = (datetime.date.today() - ultima_aplicare).days
+        if zile_ultima >= interval_zile:
+            return f"⚠️ A trecut {zile_ultima} zile de la ultima aplicare de **{tip_tratament}**. Aplică acum **{produs_recomandat}** (doză {doza_recomandata} {unitate})."
+        else:
+            return f"✅ Ultima aplicare de **{tip_tratament}**: acum {zile_ultima} zile. Următoarea peste {interval_zile - zile_ultima} zile."
+
+interval_fertilizare = params.get('tratament_fertilizare_interval_zile')
+doza_fertilizare = params.get('tratament_fertilizare_doza')
+produs_fertilizare = params.get('tratament_fertilizare_produs')
+interval_fungicid = params.get('tratament_fungicid_interval_zile')
+produs_fungicid = params.get('tratament_fungicid_produs')
+interval_insecticid = params.get('tratament_insecticid_interval_zile')
+produs_insecticid = params.get('tratament_insecticid_produs')
+
+unitate_doza = "kg/mp" if params['tip'] == 'leguma' else "kg/buc"
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    if interval_fertilizare and interval_fertilizare > 0 and produs_fertilizare:
+        mesaj_fertilizare = get_urmatorul_tratament(tratamente, "Fertilizare", interval_fertilizare, produs_fertilizare, doza_fertilizare, unitate_doza)
+        st.info(f"🌱 **Fertilizare**\n\n{mesaj_fertilizare}")
+    else:
+        st.info("🌱 **Fertilizare** – Nu există o schemă configurată.")
+with col2:
+    if interval_fungicid and interval_fungicid > 0 and produs_fungicid:
+        mesaj_fungicid = get_urmatorul_tratament(tratamente, "Fungicid", interval_fungicid, produs_fungicid, "", "")
+        st.info(f"🍄 **Tratament fungicid**\n\n{mesaj_fungicid}")
+    else:
+        st.info("🍄 **Tratament fungicid** – Nu există o schemă configurată.")
+with col3:
+    if interval_insecticid and interval_insecticid > 0 and produs_insecticid:
+        mesaj_insecticid = get_urmatorul_tratament(tratamente, "Insecticit", interval_insecticid, produs_insecticid, "", "")
+        st.info(f"🐛 **Tratament insecticid**\n\n{mesaj_insecticid}")
+    else:
+        st.info("🐛 **Tratament insecticid** – Nu există o schemă configurată.")
+
+st.markdown("---")
 
 # ========== ISTORIC TRATAMENTE ==========
 st.markdown("<div class='section-title'>📜 Istoric tratamente</div>", unsafe_allow_html=True)
