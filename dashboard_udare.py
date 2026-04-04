@@ -1,5 +1,5 @@
 # dashboard_udare.py - Sistem AI pentru legume, arbori și arbuști
-# Versiune finală cu design modern, suport complet pentru multiple culturi și tratamente
+# Versiune cu fundal imagine fixat, fără avertismente de depreciere
 
 import streamlit as st
 import pandas as pd
@@ -19,26 +19,48 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ========== CSS PERSONALIZAT AVANSAT ==========
+# ========== CSS PERSONALIZAT CU FUNDAL IMAGINE (corectat) ==========
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap');
     
+    /* Fundal general cu imagine - selectori corectați pentru Streamlit */
+    [data-testid="stAppViewContainer"] {
+        background-image: url('https://images.pexels.com/photos/164504/field-grass-nature-plant-164504.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&dpr=2');
+        background-size: cover;
+        background-attachment: fixed;
+        background-position: center;
+    }
+    
+    /* Overlay semi-transparent pentru lizibilitate */
+    [data-testid="stAppViewContainer"] > .main {
+        background-color: rgba(255, 255, 255, 0.85);
+    }
+    
+    /* Asigură că și sidebar-ul are fundal semi-transparent */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(249,250,251,0.95) 100%);
+        backdrop-filter: blur(4px);
+        border-right: 1px solid #e5e7eb;
+    }
+    
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
     }
+    
     .main {
-        background: linear-gradient(135deg, #f0f9f0 0%, #e6f3e6 100%);
+        background: transparent;
     }
     
     .card {
-        background: linear-gradient(145deg, #ffffff 0%, #fafdfa 100%);
+        background: linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(250,253,250,0.95) 100%);
         border-radius: 1.5rem;
         padding: 1.25rem;
         box-shadow: 0 8px 20px rgba(0,0,0,0.03), 0 2px 4px rgba(0,0,0,0.05);
         transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
         border: 1px solid rgba(16, 185, 129, 0.2);
         margin-bottom: 1rem;
+        backdrop-filter: blur(2px);
     }
     .card:hover {
         transform: translateY(-4px);
@@ -47,13 +69,14 @@ st.markdown("""
     }
     
     .metric-card {
-        background: linear-gradient(145deg, #ffffff 0%, #f9fff9 100%);
+        background: linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(249,255,249,0.95) 100%);
         border-radius: 1.5rem;
         padding: 1.2rem;
         text-align: center;
         box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         border-bottom: 4px solid #10b981;
         transition: all 0.2s;
+        backdrop-filter: blur(2px);
     }
     .metric-card:hover {
         transform: translateY(-3px);
@@ -109,23 +132,6 @@ st.markdown("""
         transform: scale(1.02);
         box-shadow: 0 8px 16px -6px #10b98180;
         background: linear-gradient(95deg, #059669 0%, #047857 100%);
-    }
-    
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
-        border-right: 1px solid #e5e7eb;
-        padding: 1rem 0.5rem;
-    }
-    [data-testid="stSidebar"] h1, 
-    [data-testid="stSidebar"] h2, 
-    [data-testid="stSidebar"] h3 {
-        color: #065f46;
-        font-weight: 700;
-    }
-    [data-testid="stSidebar"] .stSelectbox label,
-    [data-testid="stSidebar"] .stNumberInput label {
-        font-weight: 600;
-        color: #166534;
     }
     
     .main-title {
@@ -192,7 +198,7 @@ st.markdown("""
     }
     
     .stForm {
-        background-color: #ffffffcc;
+        background-color: rgba(255,255,255,0.9);
         padding: 0.5rem;
         border-radius: 1rem;
         border: 1px solid #d1d5db;
@@ -426,7 +432,7 @@ with st.sidebar:
     st.markdown("---")
     
     st.subheader("🌤️ **Prognoză meteo**")
-    if st.button("🔍 Verifică vremea acum", use_container_width=True):
+    if st.button("🔍 Verifică vremea acum", use_container_width=False):
         with st.spinner("Se preia prognoza..."):
             weather = get_weather_forecast()
             if weather:
@@ -560,7 +566,7 @@ if trebuie_udat:
 
 st.markdown("---")
 
-# ========== GRAFICE ȘI ANALIZE ==========
+# ========== GRAFICE ȘI ANALIZE (înlocuit use_container_width cu width) ==========
 st.markdown("<div class='section-title'>📈 Evoluție și tendințe</div>", unsafe_allow_html=True)
 if istoric:
     df_istoric = pd.DataFrame(istoric)
@@ -575,14 +581,14 @@ if istoric:
                        template='plotly_white')
         fig1.update_traces(line_color='#10b981', line_width=3)
         fig1.update_layout(plot_bgcolor='rgba(0,0,0,0)', hovermode='x unified')
-        st.plotly_chart(fig1, use_container_width=True)
+        st.plotly_chart(fig1, width='stretch')
     with col2:
         fig2 = px.area(df_istoric, x='data', y='necesar_acumulat',
                        title='Necesar cumulat (arie)',
                        labels={'data': 'Data', 'necesar_acumulat': 'Litri'},
                        template='plotly_white')
         fig2.update_traces(fillcolor='rgba(16,185,129,0.2)', line_color='#10b981')
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, width='stretch')
 else:
     st.info("Nu există date istorice pentru această plantă. Rulează scriptul de predicție.")
 
@@ -600,14 +606,14 @@ if predictii_ai:
                        labels={'data': 'Data', 'minute_recomandate': 'Minute'},
                        template='plotly_white')
         fig3.update_traces(line_color='#ef4444', line_width=3)
-        st.plotly_chart(fig3, use_container_width=True)
+        st.plotly_chart(fig3, width='stretch')
     with col2:
         if 'temperatura' in df_pred.columns:
             fig4 = px.scatter(df_pred, x='temperatura', y='minute_recomandate',
                               title='Corelație temperatură - recomandare AI',
                               labels={'temperatura': 'Temperatură (°C)', 'minute_recomandate': 'Minute'},
                               trendline='ols', template='plotly_white')
-            st.plotly_chart(fig4, use_container_width=True)
+            st.plotly_chart(fig4, width='stretch')
         else:
             st.info("Nu există date suficiente pentru corelație.")
 else:
@@ -624,7 +630,7 @@ if istoric:
                           labels={'data': 'Data', 'zile_de_la_udare': 'Zile'},
                           color='zile_de_la_udare', color_continuous_scale='Viridis',
                           template='plotly_white')
-            st.plotly_chart(fig5, use_container_width=True)
+            st.plotly_chart(fig5, width='stretch')
         else:
             st.info("Coloana 'zile_de_la_udare' lipsește.")
     with col2:
@@ -633,7 +639,7 @@ if istoric:
                             labels={'necesar_acumulat': 'Litri', 'count': 'Frecvență'},
                             nbins=20, color_discrete_sequence=['#3b82f6'],
                             template='plotly_white')
-        st.plotly_chart(fig6, use_container_width=True)
+        st.plotly_chart(fig6, width='stretch')
     st.markdown("---")
 
 if predictii_ai and len(df_pred) > 5:
@@ -645,7 +651,7 @@ if predictii_ai and len(df_pred) > 5:
                       title='Minute recomandate pe luni',
                       labels={'luna': 'Luna', 'minute_recomandate': 'Minute'},
                       template='plotly_white')
-        st.plotly_chart(fig7, use_container_width=True)
+        st.plotly_chart(fig7, width='stretch')
     with col2:
         if 'temperatura' in df_pred.columns and 'minute_recomandate' in df_pred.columns and 'zile_de_la_udare' in df_pred.columns:
             df_corr = df_pred[['minute_recomandate', 'temperatura', 'zile_de_la_udare']].corr()
@@ -653,7 +659,7 @@ if predictii_ai and len(df_pred) > 5:
                              title='Matricea de corelație',
                              color_continuous_scale='RdBu', zmin=-1, zmax=1,
                              template='plotly_white')
-            st.plotly_chart(fig8, use_container_width=True)
+            st.plotly_chart(fig8, width='stretch')
         else:
             st.info("Date insuficiente pentru corelație.")
     st.markdown("---")
@@ -674,7 +680,7 @@ if predictii_ai and len(df_pred) > 5:
                                   mode='lines+markers', name='Zile de la udare', line=dict(color='#10b981', width=2)),
                        row=3, col=1)
     fig9.update_layout(height=800, title_text="Analiza completă a plantei", template='plotly_white')
-    st.plotly_chart(fig9, use_container_width=True)
+    st.plotly_chart(fig9, width='stretch')
     st.markdown("---")
 
 # ========== SCHEMA COMPLETĂ DE TRATAMENTE ==========
@@ -736,7 +742,7 @@ if tratamente:
     df_trat = pd.DataFrame(tratamente)
     df_trat['data'] = pd.to_datetime(df_trat['data'])
     df_trat = df_trat.sort_values('data', ascending=False)
-    st.dataframe(df_trat, use_container_width=True)
+    st.dataframe(df_trat, width='stretch')
 else:
     st.info("Nu există tratamente înregistrate pentru această plantă.")
 
@@ -747,7 +753,7 @@ st.markdown("<div class='section-title'>📋 Istoric complet udări</div>", unsa
 if istoric:
     df_afisare = pd.DataFrame(istoric).tail(20)
     df_afisare = df_afisare.sort_values('data', ascending=False)
-    st.dataframe(df_afisare, use_container_width=True)
+    st.dataframe(df_afisare, width='stretch')
 else:
     st.info("Nu există date istorice pentru această plantă.")
 
