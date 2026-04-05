@@ -1,5 +1,5 @@
 # dashboard_udare.py - Sistem AI pentru legume, arbori și arbuști
-# Versiune cu fundal imagine fixat, fără avertismente de depreciere
+# Versiune finală cu fundal imagine (Lorem Picsum), design modern, suport complet pentru multiple culturi și tratamente
 
 import streamlit as st
 import pandas as pd
@@ -19,48 +19,69 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ========== CSS PERSONALIZAT CU FUNDAL IMAGINE (corectat) ==========
+# ========== CSS PERSONALIZAT CU FUNDAL IMAGINE ==========
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap');
     
-    /* Fundal general cu imagine - selectori corectați pentru Streamlit */
-    [data-testid="stAppViewContainer"] {
-        background-image: url('https://images.pexels.com/photos/164504/field-grass-nature-plant-164504.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&dpr=2');
-        background-size: cover;
-        background-attachment: fixed;
-        background-position: center;
+    /* Fundal imagine pe tot ecranul - folosim o imagine garantat accesibilă (Lorem Picsum) */
+    html, body, .stApp {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background-image: url('https://picsum.photos/id/104/1920/1080') !important;
+        background-size: cover !important;
+        background-attachment: fixed !important;
+        background-position: center !important;
     }
     
-    /* Overlay semi-transparent pentru lizibilitate */
-    [data-testid="stAppViewContainer"] > .main {
-        background-color: rgba(255, 255, 255, 0.85);
+    .stApp {
+        background: transparent !important;
     }
     
-    /* Asigură că și sidebar-ul are fundal semi-transparent */
+    /* Sidebar semi-transparent */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(249,250,251,0.95) 100%);
-        backdrop-filter: blur(4px);
-        border-right: 1px solid #e5e7eb;
+        background: rgba(255, 255, 255, 0.9) !important;
+        backdrop-filter: blur(4px) !important;
+        border-right: 1px solid rgba(0,0,0,0.1) !important;
     }
     
+    /* Carduri și elemente principale semi-transparente */
+    .card, .metric-card, .warning-card, .danger-card, .info-card,
+    .stForm, .dataframe, .streamlit-expanderHeader,
+    .stSelectbox div[data-baseweb="select"] {
+        background-color: rgba(255, 255, 255, 0.85) !important;
+        backdrop-filter: blur(2px) !important;
+    }
+    
+    /* Butoanele să rămână cu gradient și opace */
+    .stButton > button {
+        background: linear-gradient(95deg, #10b981 0%, #059669 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 2rem !important;
+        padding: 0.5rem 1.2rem !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+    }
+    .stButton > button:hover {
+        transform: scale(1.02) !important;
+        box-shadow: 0 8px 16px -6px #10b98180 !important;
+        background: linear-gradient(95deg, #059669 0%, #047857 100%) !important;
+    }
+    
+    /* Restul stilurilor */
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
     }
     
-    .main {
-        background: transparent;
-    }
-    
     .card {
-        background: linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(250,253,250,0.95) 100%);
         border-radius: 1.5rem;
         padding: 1.25rem;
         box-shadow: 0 8px 20px rgba(0,0,0,0.03), 0 2px 4px rgba(0,0,0,0.05);
         transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
         border: 1px solid rgba(16, 185, 129, 0.2);
         margin-bottom: 1rem;
-        backdrop-filter: blur(2px);
     }
     .card:hover {
         transform: translateY(-4px);
@@ -69,14 +90,12 @@ st.markdown("""
     }
     
     .metric-card {
-        background: linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(249,255,249,0.95) 100%);
         border-radius: 1.5rem;
         padding: 1.2rem;
         text-align: center;
         box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         border-bottom: 4px solid #10b981;
         transition: all 0.2s;
-        backdrop-filter: blur(2px);
     }
     .metric-card:hover {
         transform: translateY(-3px);
@@ -100,38 +119,19 @@ st.markdown("""
     }
     
     .warning-card {
-        background: linear-gradient(145deg, #fffbeb, #fef3c7);
         border-left: 5px solid #f59e0b;
         border-radius: 1rem;
         padding: 1rem;
     }
     .danger-card {
-        background: linear-gradient(145deg, #fef2f2, #fee2e2);
         border-left: 5px solid #ef4444;
         border-radius: 1rem;
         padding: 1rem;
     }
     .info-card {
-        background: linear-gradient(145deg, #eff6ff, #dbeafe);
         border-left: 5px solid #3b82f6;
         border-radius: 1rem;
         padding: 1rem;
-    }
-    
-    .stButton > button {
-        background: linear-gradient(95deg, #10b981 0%, #059669 100%);
-        color: white;
-        border: none;
-        border-radius: 2rem;
-        padding: 0.5rem 1.2rem;
-        font-weight: 600;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    .stButton > button:hover {
-        transform: scale(1.02);
-        box-shadow: 0 8px 16px -6px #10b98180;
-        background: linear-gradient(95deg, #059669 0%, #047857 100%);
     }
     
     .main-title {
@@ -180,7 +180,6 @@ st.markdown("""
     
     .streamlit-expanderHeader {
         font-weight: 600;
-        background-color: #ecfdf5;
         border-radius: 0.75rem;
         color: #065f46;
     }
@@ -198,7 +197,6 @@ st.markdown("""
     }
     
     .stForm {
-        background-color: rgba(255,255,255,0.9);
         padding: 0.5rem;
         border-radius: 1rem;
         border: 1px solid #d1d5db;
@@ -566,7 +564,7 @@ if trebuie_udat:
 
 st.markdown("---")
 
-# ========== GRAFICE ȘI ANALIZE (înlocuit use_container_width cu width) ==========
+# ========== GRAFICE ȘI ANALIZE ==========
 st.markdown("<div class='section-title'>📈 Evoluție și tendințe</div>", unsafe_allow_html=True)
 if istoric:
     df_istoric = pd.DataFrame(istoric)
